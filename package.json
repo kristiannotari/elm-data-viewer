@@ -1,0 +1,18 @@
+{
+  "name": "elm-data-viewer",
+  "devDependencies": {
+    "browser-sync": "^2.26.7",
+    "chokidar-cli": "^2.1.0",
+    "node-sass-chokidar": "^1.4.0",
+    "npm-run-all": "^4.1.5"
+  },
+  "scripts": {
+    "watch:elm": "chokidar './src/**/*.elm' -c 'elm make ./src/Main.elm --output ./public/js/main.js' --initial",
+    "build-elm": "elm make ./src/Main.elm --output ./public/js/main.js --optimize",
+    "build-css": "node-sass-chokidar sass/ -o public/css",
+    "watch-css": "npm run build-css && node-sass-chokidar sass/ -o public/css --watch --recursive",
+    "dev-server": "browser-sync start --server 'public' --files 'public/**/*.*'",
+    "build": "npm-run-all -p build-css build-elm",
+    "start": "npm-run-all -p watch-css watch:elm dev-server"
+  }
+}

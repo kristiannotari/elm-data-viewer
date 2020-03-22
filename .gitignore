@@ -1,0 +1,10 @@
+# elm-package generated files
+elm-stuff
+# elm-repl generated files
+repl-temp-*
+# yarn generated files
+.yarn
+.pnp.js
+# website generated files
+public/css/*.*
+public/js/*.*
