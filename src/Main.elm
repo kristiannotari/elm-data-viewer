@@ -1,13 +1,14 @@
 module Main exposing (Model, Msg, init, subscriptions, update, view)
 
+import Array exposing (Array)
 import Browser
+import Dict exposing (Dict)
 import Html
 import Html.Attributes
-import String
-import Svg
-import Svg.Attributes
+import Html.Events
 import Maybe.Extra
-
+import Plot
+import Data exposing (Data)
 
 
 -- MAIN
@@ -28,30 +29,21 @@ main =
 
 
 type alias Model =
-    { data : List Data
-    , graphs : List Graph
+    { data : Array Data
+    , graphs : Dict String Bool
     }
 
 
-type alias Data =
-    { name : String
-    , value : Float
-    , color : String
-    }
-
-
-type alias Graph =
-    { figure : Figure
-    , selected : Bool
-    }
-
-type Figure =
-    Plot
+type Figure
+    = Plot
 
 
 type Msg
-    = Msg1
-    | Msg2
+    = ToggleGraphTypeCheck String
+    | AddVariableData
+    | ChangeVariableDataName Int Data String
+    | ChangeVariableDataValue Int Data String
+    | ChangeVariableDataColor Int Data String
 
 
 
@@ -60,7 +52,7 @@ type Msg
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { data = [ { name = "x", value = 3.14, color = "#ff2312" } ], graphs = [ { figure = Plot, selected = True } ] }, Cmd.none )
+    ( { data = Array.fromList [ { name = "x", value = 80, color = "#ff2312" } ], graphs = Dict.fromList [ ( figureToString Plot, False ) ] }, Cmd.none )
 
 
 
@@ -70,11 +62,20 @@ init _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Msg1 ->
-            ( model, Cmd.none )
+        ToggleGraphTypeCheck figure ->
+            ( { model | graphs = toggle figure model.graphs }, Cmd.none )
 
-        Msg2 ->
-            ( model, Cmd.none )
+        AddVariableData ->
+            ( { model | data = Array.push { name = "y", value = 15, color = "#551298" } model.data }, Cmd.none )
+
+        ChangeVariableDataName index data name ->
+            ( { model | data = Array.set index { data | name = name } model.data }, Cmd.none )
+
+        ChangeVariableDataValue index data value ->
+            ( { model | data = Array.set index { data | value = Maybe.withDefault data.value (String.toFloat value) } model.data }, Cmd.none )
+
+        ChangeVariableDataColor index data color ->
+            ( { model | data = Array.set index { data | color = color } model.data }, Cmd.none )
 
 
 
@@ -92,7 +93,7 @@ subscriptions model =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Data Viewer"
+    { title = "Elm Data Viewer"
     , body =
         [ viewHeader model
         , viewMain model
@@ -104,7 +105,7 @@ viewHeader : Model -> Html.Html Msg
 viewHeader model =
     Html.header []
         [ Html.ul []
-            [ Html.li [] [ Html.text "Test" ]
+            [ Html.li [] [ Html.text "Elm Data Viewer" ]
             ]
         ]
 
@@ -123,16 +124,17 @@ viewDataList model =
     Html.section []
         [ Html.header [] [ Html.text "Values" ]
         , Html.p [] [ Html.text "Insert one or more values" ]
-        , Html.div [] (List.map viewData model.data)
+        , Html.div [] (List.map viewData (Array.toIndexedList model.data))
+        , Html.button [ Html.Events.onClick AddVariableData ] [ Html.text "Add" ]
         ]
 
 
-viewData : Data -> Html.Html Msg
-viewData data =
+viewData : ( Int, Data ) -> Html.Html Msg
+viewData ( index, data ) =
     Html.div []
-        [ Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.name ] []
-        , Html.input [ Html.Attributes.type_ "number", Html.Attributes.value (String.fromFloat data.value) ] []
-        , Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.color ] []
+        [ Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.name, Html.Events.onInput (\s -> ChangeVariableDataName index data s) ] []
+        , Html.input [ Html.Attributes.type_ "number", Html.Attributes.value (String.fromFloat data.value), Html.Events.onInput (\s -> ChangeVariableDataValue index data s) ] []
+        , Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.color, Html.Events.onInput (\s -> ChangeVariableDataColor index data s) ] []
         ]
 
 
@@ -141,15 +143,15 @@ viewGraphTypesList model =
     Html.section []
         [ Html.header [] [ Html.text "Graphs" ]
         , Html.p [] [ Html.text "Select one or more graphs" ]
-        , Html.div [] (List.map viewGraphType model.graphs)
+        , Html.div [] <| List.map viewGraphType <| Dict.keys model.graphs
         ]
 
 
-viewGraphType : Graph -> Html.Html Msg
-viewGraphType graph =
+viewGraphType : String -> Html.Html Msg
+viewGraphType figure =
     Html.div []
-        [ Html.input [ Html.Attributes.type_ "checkbox" ] []
-        , Html.label [ Html.Attributes.for "" ] [ Html.text (figureToString graph.figure) ]
+        [ Html.input [ Html.Attributes.type_ "checkbox", Html.Events.onClick <| ToggleGraphTypeCheck figure ] []
+        , Html.label [ Html.Attributes.for "" ] [ Html.text figure ]
         ]
 
 
@@ -157,46 +159,48 @@ viewFiguresList : Model -> Html.Html Msg
 viewFiguresList model =
     Html.section []
         [ Html.header [] [ Html.text "Figures" ]
-        , Html.div [] (List.map (viewFigure model.data) model.graphs |> Maybe.Extra.values)
+        , Html.div [] <| Maybe.Extra.values <| List.map (viewFigure (Array.toList model.data)) (Dict.toList model.graphs)
         ]
 
-viewFigure : List Data -> Graph -> Maybe (Html.Html Msg)
-viewFigure data graph =
-    if not graph.selected then Nothing
+
+viewFigure : List Data -> ( String, Bool ) -> Maybe (Html.Html Msg)
+viewFigure data ( figure, selected ) =
+    if not selected then
+        Nothing
+
     else
-        Just (
-            Html.figure [] [drawFigure data graph]
-        )
+        Just
+            (Html.figure [] [ drawFigure data <| stringToFigure figure ])
 
 
-drawFigure : List Data -> Graph -> Html.Html Msg
-drawFigure data graph = 
-    case graph.figure of
-        Plot -> drawPlot data
+drawFigure : List Data -> Figure -> Html.Html Msg
+drawFigure data figure =
+    case figure of
+        Plot ->
+            Plot.draw data
 
 
-drawPlot : List Data -> Html.Html Msg
-drawPlot data =
-    Svg.svg [
-        Svg.Attributes.width "300",
-        Svg.Attributes.height "250",
-        Svg.Attributes.viewBox "0 0 300 250"
-    ] [
-        Svg.rect [ Svg.Attributes.x "10"
-        , Svg.Attributes.y "10"
-        , Svg.Attributes.width "100"
-        , Svg.Attributes.height "100"
-        , Svg.Attributes.rx "15"
-        , Svg.Attributes.ry "15"
-        ] []
-    ]
-    
+
+-- UTILS
 
 
--- UTIL
+toggle : String -> Dict String Bool -> Dict String Bool
+toggle figure dict =
+    Dict.update figure (\maybeOld -> Maybe.map not maybeOld) dict
+
 
 figureToString : Figure -> String
 figureToString figure =
     case figure of
-        Plot -> "plot"
-        
+        Plot ->
+            "plot"
+
+
+stringToFigure : String -> Figure
+stringToFigure figure =
+    case figure of
+        "Plot" ->
+            Plot
+
+        _ ->
+            Plot

@@ -1015,6 +1015,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"elm-data-viewer@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "elm-data-viewer@workspace:."
+  dependencies:
+    browser-sync: ^2.26.7
+    chokidar-cli: ^2.1.0
+    node-sass-chokidar: ^1.4.0
+    npm-run-all: ^4.1.5
+  languageName: unknown
+  linkType: soft
+
 "emoji-regex@npm:^7.0.1":
   version: 7.0.3
   resolution: "emoji-regex@npm:7.0.3"
@@ -3155,17 +3166,6 @@ fsevents@~2.1.2:
   checksum: 2/ddeb0f07d0d5efa649c2c5e39d1afd0e3668df2b392d036c8a508b0034f7beffbc474b3c2f7fd3fed2dc4113cef8f1f7e00d05690df3c611b36f6c7efd7852d1
   languageName: node
   linkType: hard
-
-"project@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "project@workspace:."
-  dependencies:
-    browser-sync: ^2.26.7
-    chokidar-cli: ^2.1.0
-    node-sass-chokidar: ^1.4.0
-    npm-run-all: ^4.1.5
-  languageName: unknown
-  linkType: soft
 
 "pseudomap@npm:^1.0.2":
   version: 1.0.2
