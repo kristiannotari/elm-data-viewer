@@ -7,8 +7,8 @@ import Html
 import Html.Attributes
 import Html.Events
 import Maybe.Extra
-import Plot
-import Data exposing (Data)
+import View.Plot as Plot
+
 
 
 -- MAIN
@@ -31,6 +31,13 @@ main =
 type alias Model =
     { data : Array Data
     , graphs : Dict String Bool
+    }
+
+
+type alias Data =
+    { name : String
+    , value : Float
+    , color : String
     }
 
 
@@ -177,12 +184,20 @@ drawFigure : List Data -> Figure -> Html.Html Msg
 drawFigure data figure =
     case figure of
         Plot ->
-            Plot.draw data
+            Plot.draw { width = 300, height = 250 } <| toPlotData data
 
 
 
 -- UTILS
 
+
+toPlotData : List Data -> List Plot.Variable
+toPlotData data = 
+    List.map (\d -> {
+        label = d.name,
+        value = d.value,
+        color = Just d.color
+    }) data 
 
 toggle : String -> Dict String Bool -> Dict String Bool
 toggle figure dict =
