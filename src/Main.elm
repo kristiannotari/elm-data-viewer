@@ -111,9 +111,7 @@ view model =
 viewHeader : Model -> Html.Html Msg
 viewHeader model =
     Html.header []
-        [ Html.ul []
-            [ Html.li [] [ Html.text "Elm Data Viewer" ]
-            ]
+        [ Html.h1 [] [ Html.text "Elm Data Viewer" ]
         ]
 
 
@@ -192,12 +190,17 @@ drawFigure data figure =
 
 
 toPlotData : List Data -> List Plot.Variable
-toPlotData data = 
-    List.map (\d -> {
-        label = d.name,
-        value = d.value,
-        color = Just d.color
-    }) data 
+toPlotData data =
+    List.map
+        (\d ->
+            { label = d.name
+            , value = d.value
+            , color = Just d.color
+            , scaledValue = Nothing
+            }
+        )
+        data
+
 
 toggle : String -> Dict String Bool -> Dict String Bool
 toggle figure dict =
