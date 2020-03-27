@@ -83,7 +83,7 @@ drawPlotPoint : Size -> Int -> Variable -> Svg.Svg msg
 drawPlotPoint size index variable =
     let
         value =
-            Maybe.withDefault variable.value variable.scaledValue + Debug.log (Debug.toString variable) 0
+            Maybe.withDefault variable.value variable.scaledValue
     in
     case modBy 2 index of
         0 ->
