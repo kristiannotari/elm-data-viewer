@@ -79,7 +79,7 @@ update msg model =
             ( { model | data = Array.set index { data | name = name } model.data }, Cmd.none )
 
         ChangeVariableDataValue index data value ->
-            ( { model | data = Array.set index { data | value = Maybe.withDefault data.value (String.toFloat value) } model.data }, Cmd.none )
+            ( { model | data = Array.set index { data | value = Maybe.withDefault 0 (String.toFloat value) } model.data }, Cmd.none )
 
         ChangeVariableDataColor index data color ->
             ( { model | data = Array.set index { data | color = color } model.data }, Cmd.none )
@@ -126,45 +126,46 @@ viewMain model =
 
 viewDataList : Model -> Html.Html Msg
 viewDataList model =
-    Html.section []
+    Html.section [ Html.Attributes.id "values" ]
         [ Html.header [] [ Html.text "Values" ]
         , Html.p [] [ Html.text "Insert one or more values" ]
-        , Html.div [] (List.map viewData (Array.toIndexedList model.data))
+        , Html.div [ Html.Attributes.id "values-wrapper" ] (List.map viewData (Array.toIndexedList model.data))
         , Html.button [ Html.Events.onClick AddVariableData ] [ Html.text "Add" ]
         ]
 
 
 viewData : ( Int, Data ) -> Html.Html Msg
 viewData ( index, data ) =
-    Html.div []
+    Html.div [ Html.Attributes.class "value-wrapper" ]
         [ Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.name, Html.Events.onInput (\s -> ChangeVariableDataName index data s) ] []
         , Html.input [ Html.Attributes.type_ "number", Html.Attributes.value (String.fromFloat data.value), Html.Events.onInput (\s -> ChangeVariableDataValue index data s) ] []
         , Html.input [ Html.Attributes.type_ "text", Html.Attributes.value data.color, Html.Events.onInput (\s -> ChangeVariableDataColor index data s) ] []
+        , Html.div [ Html.Attributes.style "background-color" data.color ] []
         ]
 
 
 viewGraphTypesList : Model -> Html.Html Msg
 viewGraphTypesList model =
-    Html.section []
+    Html.section [ Html.Attributes.id "graphs-selection" ]
         [ Html.header [] [ Html.text "Graphs" ]
         , Html.p [] [ Html.text "Select one or more graphs" ]
-        , Html.div [] <| List.map viewGraphType <| Dict.keys model.graphs
+        , Html.div [ Html.Attributes.id "graphs-selection-wrapper" ] <| List.map viewGraphType <| Dict.keys model.graphs
         ]
 
 
 viewGraphType : String -> Html.Html Msg
 viewGraphType figure =
-    Html.div []
-        [ Html.input [ Html.Attributes.type_ "checkbox", Html.Events.onClick <| ToggleGraphTypeCheck figure ] []
-        , Html.label [ Html.Attributes.for "" ] [ Html.text figure ]
+    Html.div [ Html.Attributes.class "graph-checkbox-wrapper" ]
+        [ Html.input [ Html.Attributes.id <| "gs-" ++ figure, Html.Attributes.type_ "checkbox", Html.Events.onClick <| ToggleGraphTypeCheck figure ] []
+        , Html.label [ Html.Attributes.for <| "gs-" ++ figure ] [ Html.text figure ]
         ]
 
 
 viewFiguresList : Model -> Html.Html Msg
 viewFiguresList model =
-    Html.section []
+    Html.section [ Html.Attributes.id "figures" ]
         [ Html.header [] [ Html.text "Figures" ]
-        , Html.div [] <| Maybe.Extra.values <| List.map (viewFigure (Array.toList model.data)) (Dict.toList model.graphs)
+        , Html.div [ Html.Attributes.id "figures-wrapper" ] <| Maybe.Extra.values <| List.map (viewFigure (Array.toList model.data)) (Dict.toList model.graphs)
         ]
 
 
