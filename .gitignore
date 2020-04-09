@@ -1,3 +1,5 @@
+# environment specific files
+.DS_Store
 # editor files
 .vscode
 # elm-package generated files
