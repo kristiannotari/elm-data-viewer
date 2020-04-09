@@ -1,5 +1,5 @@
 {
-  "name": "elm-data-viewer",
+  "name": "elm-day-focus",
   "devDependencies": {
     "browser-sync": "^2.26.7",
     "chokidar-cli": "^2.1.0",
