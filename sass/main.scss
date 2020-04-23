@@ -3,4 +3,10 @@
 body {
     background-color: white;
     padding: 16px;
+
+    img.edit-icon {
+        height: 16px;
+        margin-left: 16px;
+        cursor: pointer;
+    }
 }

@@ -28,6 +28,8 @@ main =
 type Model
     = Normal State
     | CardCreation State Card
+    | CardOver State Int
+    | CardEditing State Card Int
 
 
 type alias State =
@@ -55,6 +57,12 @@ type Msg
     | CardCreationDone
     | CardCreationDiscarded
     | CardCreationChangedTitle String
+    | CardMouseEnter Int
+    | CardMouseLeave
+    | CardEditingStarted Card
+    | CardEditingChangedTitle String
+    | CardEditingDiscarded
+    | CardEditingDone
 
 
 
@@ -116,6 +124,24 @@ update msg model =
         ( CardCreationChangedTitle title, CardCreation state card ) ->
             ( CardCreation state { card | title = title }, Cmd.none )
 
+        ( CardMouseEnter index, Normal state ) ->
+            ( CardOver state index, Cmd.none )
+            
+        ( CardMouseLeave, CardOver state _ ) ->
+            ( Normal state, Cmd.none )
+        
+        ( CardEditingStarted card, CardOver state index ) ->
+            ( CardEditing state card index, Cmd.none )
+
+        ( CardEditingChangedTitle title, CardEditing state card index ) ->
+            ( CardEditing state { card | title = title } index, Cmd.none )
+
+        ( CardEditingDiscarded, CardEditing state _ _ ) ->
+            ( Normal state, Cmd.none )
+
+        ( CardEditingDone, CardEditing state card index ) ->
+            ( Normal { state | cards = List.indexedMap (\i c -> if i == index then card else c ) state.cards}, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -161,28 +187,45 @@ viewMenuItems =
 
 viewCards : Model -> Html Msg
 viewCards model =
-    case model of
-        Normal state ->
-            Html.section [] <| List.map viewCard state.cards
+    let
+        state = case model of
+            Normal s -> s
+            CardCreation s _ -> s
+            CardOver s _ -> s
+            CardEditing s _ _ -> s
+    in
+        Html.section [] <| List.indexedMap (viewCard model) state.cards
 
-        CardCreation state _ ->
-            Html.section [] <| List.map viewCard state.cards
 
-
-viewCard : Card -> Html Msg
-viewCard card =
-    Html.div [] [ Html.text card.title ]
-
+viewCard : Model -> Int -> Card -> Html Msg
+viewCard model index card =
+    let
+        details = case model of
+            CardOver state overIndex ->
+                if overIndex == index then
+                    Html.img [ Html.Events.onClick <| CardEditingStarted card, Html.Attributes.class "edit-icon", Html.Attributes.src "/assets/create-black-36dp.svg" ] []
+                else
+                    Html.text ""
+            _ ->
+                Html.text ""
+    in 
+        Html.div [Html.Events.onMouseEnter <| CardMouseEnter index, Html.Events.onMouseLeave <| CardMouseLeave ] <| List.append [Html.text card.title] [details]
 
 viewCardCreation : Model -> Html Msg
 viewCardCreation model =
     case model of
-        Normal _ ->
-            Html.text ""
-
         CardCreation _ card ->
             Html.form [ Html.Events.onSubmit CardCreationDone ]
-                [ Html.input [ Html.Events.onInput (\value -> CardCreationChangedTitle value), Html.Attributes.placeholder "Card Title", Html.Attributes.autofocus True ] [ Html.text card.title ]
+                [ Html.input [ Html.Events.onInput (\value -> CardCreationChangedTitle value), Html.Attributes.placeholder "Card Title", Html.Attributes.autofocus True, Html.Attributes.value card.title ] []
                 , Html.button [ Html.Attributes.disabled (String.isEmpty card.title), Html.Events.onClick CardCreationDone ] [ Html.text "Add" ]
                 , Html.button [ Html.Events.onClick CardCreationDiscarded ] [ Html.text "Cancel" ]
                 ]
+        CardEditing _ card _ ->
+            Html.form [ Html.Attributes.class card.title, Html.Events.onSubmit CardEditingDone ]
+                [ Html.input [ Html.Events.onInput (\value -> CardEditingChangedTitle value), Html.Attributes.placeholder "Card Title", Html.Attributes.autofocus True, Html.Attributes.value card.title] []
+                , Html.button [ Html.Attributes.disabled (String.isEmpty card.title), Html.Events.onClick CardEditingDone ] [ Html.text "Change" ]
+                , Html.button [ Html.Events.onClick CardEditingDiscarded ] [ Html.text "Cancel" ]
+                ]
+        _ ->
+            Html.text ""
+
