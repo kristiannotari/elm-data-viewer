@@ -4,9 +4,20 @@ body {
     background-color: white;
     padding: 16px;
 
-    img.edit-icon {
-        height: 16px;
-        margin-left: 16px;
-        cursor: pointer;
+    section {
+
+        p {
+            display: inline-block;
+            margin-left: 4px;
+            width: 60px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        img.edit-icon {
+            height: 16px;
+            margin-left: 16px;
+            cursor: pointer;
+        }
     }
 }
