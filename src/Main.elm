@@ -9,6 +9,8 @@ import String
 import Model.Card as Card exposing (Card)
 import Model.Label as Label exposing (Label)
 import Task
+import Maybe.Extra
+import Time
 
 
 -- MAIN
@@ -39,6 +41,7 @@ type Scene
     | CardCreation Card
     | CardOver Card.Id
     | CardEditing (Card.Id, Card)
+    | CardDeletion Card.Id
 
 
 type alias State =
@@ -46,6 +49,7 @@ type alias State =
     , labels : Label.Collection
     , active: Maybe Card.Id
     , sleep: Bool
+    , restTime: Int
     }
 
 
@@ -63,6 +67,13 @@ type Msg
     | CardEditingChangedLabel String
     | CardEditingDiscarded
     | CardEditingDone
+    | CardDeletionStarted
+    | CardDeletionCanceled
+    | CardDeletionDone
+    | CardActivated
+    | SleepChanged
+    | Tick Time.Posix
+    | RestTick Time.Posix
 
 
 
@@ -76,7 +87,8 @@ init _ =
             cards = defaultCards,
             labels = defaultLabels,
             active = Nothing,
-            sleep = False
+            sleep = False,
+            restTime = 0
             },
         scene = Normal
         }
@@ -118,7 +130,7 @@ update msg model =
             ( CardCreationStarted, Normal ) ->
                 ( { model | scene = CardCreation defaultNewCard }, Cmd.none )
 
-            ( CardAdded cards, CardCreation card ) ->
+            ( CardAdded cards, CardCreation _ ) ->
                 ( { model | scene = Normal, state = { state | cards = cards }}, Cmd.none )
 
             ( CardCreationDone, CardCreation card ) ->
@@ -141,6 +153,13 @@ update msg model =
             ( CardMouseLeave, CardOver _ ) ->
                 ( { model | scene = Normal }, Cmd.none )
             
+            ( CardActivated, CardOver cardId ) ->
+                case Card.getCollection cardId state.cards of
+                    Just _ -> 
+                        ( { model | state = { state | active = Just cardId} }, Cmd.none )
+                    Nothing -> 
+                        ( model, Cmd.none )
+            
             ( CardEditingStarted, CardOver cardId ) ->
                 case Card.getCollection cardId state.cards of
                     Just card -> 
@@ -162,6 +181,33 @@ update msg model =
             ( CardEditingDone, CardEditing (cardId, card) ) ->
                 ( { model | scene = Normal, state = { state | cards = Card.updateCollection cardId card state.cards }}, Cmd.none )
 
+            ( CardDeletionStarted, CardOver cardId ) ->
+                ( { model | scene = CardDeletion cardId }, Cmd.none )
+            
+            ( CardDeletionCanceled, CardDeletion _ ) ->
+                ( { model | scene = Normal }, Cmd.none )
+            
+            ( CardDeletionDone, CardDeletion cardId ) ->
+                ( { model | scene = Normal, state = { state | cards = Card.removeCollection cardId state.cards } }, Cmd.none )
+
+            ( SleepChanged, _ ) ->
+                ( { model | state = { state | sleep = not state.sleep }}, Cmd.none )
+
+            ( Tick _, _ ) ->
+                case state.active of 
+                    Just cardId ->
+                        case Card.getCollection cardId state.cards of
+                            Just card -> 
+                                let cardData = Card.getData card in
+                                ( { model | state = { state | cards = Card.updateCollection cardId (Card.new { cardData | spentTime = cardData.spentTime + 1 }) state.cards} }, Cmd.none )
+                            Nothing -> 
+                                ( model, Cmd.none )
+                    Nothing ->
+                        ( model, Cmd.none )
+            
+            ( RestTick _, _ ) ->
+                ( { model | state = { state | restTime = state.restTime + 1 }}, Cmd.none )
+
             _ ->
                 ( model, Cmd.none )
 
@@ -172,7 +218,11 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    if model.state.sleep then Time.every 1000 RestTick
+    else 
+        case model.state.active of 
+            Just _ -> Time.every 1000 Tick
+            Nothing -> Sub.none
 
 
 
@@ -183,24 +233,33 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Elm Day Focus"
     , body =
-        [ viewHeaderBar
+        [ viewHeaderBar model
         , viewCards model
         , viewCardCreation model
+        , viewCardDeletion model
         ]
     }
 
 
-viewHeaderBar : Html Msg
-viewHeaderBar =
+viewHeaderBar : Model -> Html Msg
+viewHeaderBar model =
     Html.header []
         (Html.h1 [] [ Html.text "Elm Day Focus" ]
-            :: viewMenuItems
+            :: viewStats model :: viewMenuItems model
         )
 
+viewStats: Model -> Html Msg
+viewStats model =
+    Html.div [] [
+        Html.text <| "st: " ++ (formatSeconds <| totalSpentTime model),
+        Html.text <| " rt: " ++ (formatSeconds <| totalRestTime model)
+    ]
 
-viewMenuItems : List (Html Msg)
-viewMenuItems =
+
+viewMenuItems : Model -> List (Html Msg)
+viewMenuItems model =
     [ Html.img [ Html.Events.onClick CardCreationStarted, Html.Attributes.src "/assets/add-black-36dp.svg" ] []
+    , Html.img [ Html.Attributes.class <| if model.state.sleep then "sleeping" else "", Html.Events.onClick SleepChanged, Html.Attributes.src "/assets/brightness_3-black-36dp.svg" ] []
     , Html.img [ Html.Attributes.src "/assets/settings-black-36dp.svg" ] []
     ]
 
@@ -216,13 +275,15 @@ viewCard model id card =
         details = case model.scene of
             CardOver cardId ->
                 if cardId == id then
-                    Html.img [ Html.Events.onClick <| CardEditingStarted, Html.Attributes.class "edit-icon", Html.Attributes.src "/assets/create-black-36dp.svg" ] []
+                    [ Html.img [ Html.Events.onClick <| CardEditingStarted, Html.Attributes.class "edit-icon", Html.Attributes.src "/assets/create-black-36dp.svg" ] []
+                    , Html.img [ Html.Events.onClick <| CardDeletionStarted, Html.Attributes.class "edit-icon", Html.Attributes.src "/assets/delete-black-36dp.svg" ] []
+                    ]
                 else
-                    Html.text ""
+                    [Html.text ""]
             _ ->
-                Html.text ""
+                [Html.text ""]
         cardData = Card.getData card
-        labelDetails = case cardData.label of
+        viewLabel = case cardData.label of
             Just labelId ->
                 case Label.getCollection labelId model.state.labels of
                     Just label -> 
@@ -231,33 +292,55 @@ viewCard model id card =
                         Html.text ""
             Nothing ->
                 Html.text ""
+        active = Maybe.Extra.unwrap False (\cardId -> cardId == id) model.state.active
     in 
-        (Card.idToString id, Html.div [Html.Events.onMouseEnter <| CardMouseEnter id, Html.Events.onMouseLeave <| CardMouseLeave ] <| List.append [Html.text cardData.title, labelDetails] [details])
+        (Card.idToString id, Html.div [Html.Attributes.class <| if active then "active" else "", Html.Events.onMouseEnter <| CardMouseEnter id, Html.Events.onMouseLeave CardMouseLeave, Html.Events.onClick CardActivated ] <| List.append [Html.text cardData.title, viewLabel, viewCardTime cardData] details)
+
+
+viewCardTime : Card.Data -> Html Msg
+viewCardTime cardData =
+    Html.p [] [Html.text <| formatSeconds cardData.spentTime]
 
 viewCardCreation : Model -> Html Msg
 viewCardCreation model =
     case model.scene of
         CardCreation card ->
             let cardData = Card.getData card in
-            Html.form [ Html.Events.onSubmit CardCreationDone ]
+            Html.div []
                 [ Html.input [ Html.Events.onInput (\value -> CardCreationChangedTitle value), Html.Attributes.placeholder "Card Title", Html.Attributes.autofocus True, Html.Attributes.value cardData.title ] []
-                , Html.select [ Html.Events.onInput (\value -> CardCreationChangedLabel value)] <| (Html.option [ Html.Attributes.value "" ] [ Html.text "-" ]) :: Label.idMapCollection (viewLabelOption Nothing) model.state.labels
+                , Html.select [ Html.Events.onInput (\value -> CardCreationChangedLabel value)] <| Html.option [ Html.Attributes.value "" ] [ Html.text "-" ] :: Label.idMapCollection (viewLabelOption Nothing) model.state.labels
                 , Html.button [ Html.Attributes.disabled (String.isEmpty cardData.title), Html.Events.onClick CardCreationDone ] [ Html.text "Add" ]
                 , Html.button [ Html.Events.onClick CardCreationDiscarded ] [ Html.text "Cancel" ]
                 ]
-        CardEditing (cardId, card) ->
+        CardEditing (_, card) ->
             let cardData = Card.getData card in
-            Html.form [ Html.Events.onSubmit CardEditingDone ]
+            Html.div []
                 [ Html.input [ Html.Events.onInput (\value -> CardEditingChangedTitle value), Html.Attributes.placeholder "Card Title", Html.Attributes.autofocus True, Html.Attributes.value cardData.title] []
-                , Html.select [ Html.Events.onInput (\value -> CardEditingChangedLabel value)] <| (Html.option [ Html.Attributes.value "" ] [ Html.text "label" ]) :: Label.idMapCollection (viewLabelOption cardData.label) model.state.labels
+                , Html.select [ Html.Events.onInput (\value -> CardEditingChangedLabel value)] <| Html.option [ Html.Attributes.value "" ] [ Html.text "label" ] :: Label.idMapCollection (viewLabelOption cardData.label) model.state.labels
                 , Html.button [ Html.Attributes.disabled (String.isEmpty cardData.title), Html.Events.onClick CardEditingDone ] [ Html.text "Change" ]
                 , Html.button [ Html.Events.onClick CardEditingDiscarded ] [ Html.text "Cancel" ]
                 ]
         _ ->
             Html.text ""
+        
+viewCardDeletion : Model -> Html Msg
+viewCardDeletion model =
+    case model.scene of
+        CardDeletion cardId ->
+            case Card.getCollection cardId model.state.cards of
+                Just card ->
+                    let cardData = Card.getData card in
+                        Html.div []
+                            [ Html.p [] [Html.text <| "Are you sure you want to delete this card: " ++ cardData.title ]
+                            , Html.button [ Html.Events.onClick CardDeletionDone ] [ Html.text "Yes" ]
+                            , Html.button [ Html.Events.onClick CardDeletionCanceled ] [ Html.text "No" ]
+                            ]
+                Nothing ->
+                    Html.text ""
+        _ ->
+            Html.text ""
 
-
-viewLabelOption: Maybe Label.Id -> Label.Id -> Label -> Html Msg
+viewLabelOption : Maybe Label.Id -> Label.Id -> Label -> Html Msg
 viewLabelOption cardLabelId labelId label =
     let
         labelData = Label.getData label
@@ -265,3 +348,24 @@ viewLabelOption cardLabelId labelId label =
             Just id -> Label.idToString id == Label.idToString labelId
             Nothing -> False
     in Html.option [ Html.Attributes.value <| Label.idToString labelId, Html.Attributes.selected selected ] [ Html.text labelData.name ]
+
+
+-- UTILS
+
+formatSeconds : Int -> String
+formatSeconds spentTime =
+    let
+        hours = spentTime // 60 // 60
+        minutes = spentTime // 60
+        seconds = modBy 60 spentTime
+    in (if hours > 0 then String.fromInt hours ++ "h " else "") ++ (if minutes > 0 then String.fromInt minutes ++ "m " else "") ++ String.fromInt seconds ++ "s"
+
+
+totalSpentTime : Model -> Int
+totalSpentTime model =
+    List.foldl (\time acc -> acc + time) 0 <| Card.idMapCollection (\_ card -> 
+        let cardData = Card.getData card in cardData.spentTime) model.state.cards
+
+totalRestTime : Model -> Int
+totalRestTime model =
+    model.state.restTime

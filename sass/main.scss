@@ -4,14 +4,21 @@ body {
     background-color: white;
     padding: 16px;
 
-    section {
+    img.sleeping {
+        background-color: red;
+    }
 
+    section {
         p {
             display: inline-block;
             margin-left: 4px;
             width: 60px;
             text-align: center;
             border-radius: 8px;
+        }
+
+        div.active {
+            background-color: lightgray;
         }
 
         img.edit-icon {
