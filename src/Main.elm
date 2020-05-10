@@ -309,7 +309,7 @@ viewStats model =
 
 viewMenuItems : Model -> List (Html Msg)
 viewMenuItems model =
-    [ Html.img [ Html.Events.onClick CardCreationStarted, Html.Attributes.src "/assets/add-black-36dp.svg" ] []
+    [ Html.img [ Html.Events.onClick CardCreationStarted, Html.Attributes.src "assets/add-black-36dp.svg" ] []
     , Html.img
         [ Html.Attributes.class <|
             if model.state.sleep then
@@ -318,10 +318,10 @@ viewMenuItems model =
             else
                 ""
         , Html.Events.onClick SleepChanged
-        , Html.Attributes.src "/assets/brightness_3-black-36dp.svg"
+        , Html.Attributes.src "assets/brightness_3-black-36dp.svg"
         ]
         []
-    , Html.img [ Html.Attributes.src "/assets/settings-black-36dp.svg" ] []
+    , Html.img [ Html.Attributes.src "assets/settings-black-36dp.svg" ] []
     ]
 
 
@@ -342,8 +342,8 @@ viewCard model id card =
                     False
 
         details =
-            [ Html.img [ Html.Events.onClick <| CardEditingStarted, Html.Attributes.class "over-icon", Html.Attributes.src "/assets/create-black-36dp.svg" ] []
-            , Html.img [ Html.Events.onClick <| CardDeletionStarted, Html.Attributes.class "over-icon", Html.Attributes.src "/assets/delete-black-36dp.svg" ] []
+            [ Html.img [ Html.Events.onClick <| CardEditingStarted, Html.Attributes.class "over-icon", Html.Attributes.src "assets/create-black-36dp.svg" ] []
+            , Html.img [ Html.Events.onClick <| CardDeletionStarted, Html.Attributes.class "over-icon", Html.Attributes.src "assets/delete-black-36dp.svg" ] []
             ]
 
         cardData =
