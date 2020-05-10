@@ -1,0 +1,53 @@
+name: deploy
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+  
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    
+    - uses: jorelali/setup-elm@v2
+      with:
+        elm-version: 0.19.1
+
+    # Runs a single command using the runners shell
+    - name: Install uglify-js
+      run: npm install uglify-js --global
+    
+    - name: Install sass
+      run: npm install node-sass-chokidar --global
+    
+    - name: Compile sass
+      run: node-sass-chokidar sass/ -o public/css
+    
+    - name: Compile Elm
+      run: elm make src/Main.elm --optimize --output=public/js/main.js
+    
+    - name: Compress and minify Elm
+      run: |
+        uglifyjs public/js/main.js --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=public/js/main.js
+
+    - name: Deploy to GitHub Pages
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v1
+      with:
+        target_branch: gh-pages
+        build_dir: public
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
