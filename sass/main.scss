@@ -1,30 +1,261 @@
 @import "normalize";
+@import "variables";
 
 body {
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji,
+        Segoe UI Emoji;
+    color: $color-dark;
     background-color: white;
     padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
 
-    img.sleeping {
-        background-color: red;
-    }
+    #container {
+        max-width: 800px;
+        flex-grow: 1;
 
-    section {
-        p {
-            display: inline-block;
-            margin-left: 4px;
-            width: 60px;
-            text-align: center;
-            border-radius: 8px;
+        @media (max-width: 800px) {
+            max-width: calc(100% - 16px);
         }
 
-        div.active {
-            background-color: lightgray;
+        header {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+
+            div {
+                flex-shrink: 0;
+
+                img {
+                    margin-left: 8px;
+                    cursor: pointer;
+                    transition: 0.1s all;
+                    border-radius: 50%;
+
+                    &:hover {
+                        transform: scale(1.2);
+                    }
+
+                    &.sleeping {
+                        transform: scale(1.2);
+                        background-color: $color-important;
+                    }
+                }
+            }
         }
 
-        img.edit-icon {
-            height: 16px;
-            margin-left: 16px;
-            cursor: pointer;
+        #stats {
+            margin-bottom: 24px;
+        }
+
+        #cards {
+            border-bottom: 1px solid $color-border;
+
+            .card {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+                border-top: 1px solid $color-border;
+                padding: 0 72px 0 16px;
+                opacity: 0.7;
+                transition: 0.1s opacity;
+                cursor: pointer;
+
+                .title {
+                    flex-grow: 1;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                    white-space: nowrap;
+
+                    @media (max-width: 420px) {
+                        flex-basis: 100%;
+                    }
+                }
+
+                .label {
+                    width: 80px;
+                    height: 1.3em;
+                    line-height: 1.3em;
+                    text-align: center;
+                    border-radius: 8px;
+                    padding: 0 8px;
+                    margin: 0 16px 0 16px;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                    white-space: nowrap;
+
+                    @media (max-width: 420px) {
+                        width: 4px;
+                        margin-left: 0;
+                        text-indent: 100%;
+                    }
+                }
+
+                .spent-time,
+                .planned-time {
+                    width: 80px;
+                    text-align: right;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                    white-space: nowrap;
+
+                    @media (max-width: 420px) {
+                        margin: 6px 0;
+                        text-align: left;
+                        width: auto;
+                        font-size: 0.8em;
+                    }
+                }
+
+                .planned-time {
+                    text-align: left;
+                }
+
+                .spent-time + p {
+                    margin: 0 8px;
+                }
+
+                .over-icon {
+                    display: none;
+                    width: 20px;
+                    margin-left: 16px;
+                    cursor: pointer;
+                    transition: 0.1s transform;
+
+                    &:hover {
+                        transform: scale(1.2);
+                    }
+
+                    @media (max-width: 420px) {
+                        & {
+                            display: inline;
+                            opacity: 0.5;
+                        }
+
+                        &:nth-of-type(1) {
+                            margin-left: auto;
+                        }
+                    }
+                }
+
+                &.active {
+                    opacity: 1;
+                    border-left: 10px solid $color-border;
+                    margin-left: -10px;
+
+                    @media (max-width: 420px) {
+                        .over-icon {
+                            opacity: 1;
+                        }
+                    }
+                }
+
+                &.over {
+                    padding-right: 0;
+
+                    .over-icon {
+                        display: inline;
+                    }
+                }
+
+                @media (max-width: 420px) {
+                    padding-right: 0;
+                    padding-bottom: 10px;
+                }
+            }
+        }
+
+        #obscurer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            .buttons {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 24px;
+
+                button {
+                    margin-left: 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                }
+            }
+
+            #card-editor,
+            #card-deletor {
+                left: 16px;
+                max-width: calc(100% - 64px);
+                width: 300px;
+                background-color: $color-light;
+                padding: 16px;
+                border-radius: 6px;
+            }
+
+            .details {
+                .planned-time.invalid:focus {
+                    border-color: $color-important !important;
+                }
+            }
+
+            #card-editor {
+                .title {
+                    width: calc(100% - 32px);
+                    height: 48px;
+                    border-radius: 6px;
+                    padding: 0 16px;
+                    font-size: 1.2em;
+                }
+
+                .details {
+                    display: flex;
+                    justify-content: space-between;
+                    flex-direction: column;
+                    flex-wrap: wrap;
+
+                    .labeled-input {
+                        margin-top: 16px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-grow: 1;
+
+                        label {
+                            margin-right: 8px;
+                            flex-shrink: 0;
+                            flex-grow: 1;
+                        }
+
+                        select {
+                            width: 140px;
+                        }
+
+                        .planned-time {
+                            width: 120px;
+                            border-radius: 6px;
+                            padding: 0 8px;
+                        }
+                    }
+                }
+            }
+
+            #card-deletor {
+                .title {
+                    font-weight: 800;
+                }
+            }
         }
     }
 }
