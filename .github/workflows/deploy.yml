@@ -28,10 +28,10 @@ jobs:
 
     # Runs a single command using the runners shell
     - name: Install uglify-js
-      run: npm install uglify-js
+      run: npm install uglify-js --global
     
     - name: Install sass
-      run: npm install node-sass-chokidar
+      run: npm install node-sass-chokidar --global
     
     - name: Compile sass
       run: node-sass-chokidar sass/ -o public/css
